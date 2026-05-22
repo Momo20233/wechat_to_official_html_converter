@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>微信公众号文章转官网 HTML 工具</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #f5f5f7;
+      color: #1f2937;
+    }
+    header {
+      padding: 24px 32px;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    header h1 { margin: 0 0 8px; font-size: 24px; font-weight: 700; }
+    header p { margin: 0; color: #6b7280; font-size: 14px; }
+    .toolbar {
+      margin: 18px 32px 0;
+      padding: 16px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .toolbar label { font-size: 14px; font-weight: 600; }
+    input[type="file"] { font-size: 14px; }
+    .option {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: #374151;
+      background: #f9fafb;
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    .tips {
+      margin: 14px 32px 18px;
+      padding: 14px 16px;
+      background: #fff7ed;
+      color: #9a3412;
+      border: 1px solid #fed7aa;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 0 32px 32px;
+    }
+    .panel {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #fafafa;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .panel-header h2 { margin: 0; font-size: 16px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      background: #1f2937;
+      color: white;
+    }
+    button.secondary { background: #e5e7eb; color: #111827; }
+    button.danger { background: #ef4444; }
+    button:hover { opacity: 0.9; }
+    textarea {
+      width: 100%;
+      min-height: 620px;
+      border: none;
+      resize: vertical;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      outline: none;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+    .status {
+      padding: 10px 16px;
+      color: #6b7280;
+      font-size: 13px;
+      border-top: 1px solid #e5e7eb;
+      background: #fafafa;
+    }
+    @media (max-width: 900px) {
+      .container { grid-template-columns: 1fr; padding: 0 16px 16px; }
+      header { padding: 20px 16px; }
+      .toolbar, .tips { margin-left: 16px; margin-right: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>微信公众号文章转官网 HTML 工具</h1>
+    <p>支持“双源模式”：粘贴原文保证文字一字不差，上传 PDF 作为版式参考。核心原则：不改写、不润色、不总结，只做结构转换。</p>
+  </header>
+
+  <section class="toolbar">
+    <label for="pdfFile">上传 PDF 版式参考：</label>
+    <input id="pdfFile" type="file" accept="application/pdf" />
+    <button onclick="extractPdfText()">读取 PDF 结构</button>
+    <button class="secondary" onclick="convertNow()">生成 HTML</button>
+    <button class="secondary" onclick="copyOutput()">复制代码</button>
+    <label class="option"><input type="checkbox" id="usePdfLayout" checked /> 使用 PDF 判断格式</label>
+    <label class="option"><input type="checkbox" id="keepTitle" /> 保留文章标题</label>
+    <label class="option"><input type="checkbox" id="keepImages" /> 保留图片标签</label>
+    <label class="option"><input type="checkbox" id="keepExistingStrong" checked /> 保留原有加粗</label>
+  </section>
+
+  <div class="tips">
+    建议：把公众号原文或已有 HTML 粘贴到左侧，同时上传 PDF。网站会以左侧原文作为唯一文字来源，保证一字不差；PDF 只用来判断标题、列表、居中说明和段落层级。图片默认忽略，方便你手动上传。
+  </div>
+
+  <main class="container">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>主文本：粘贴公众号原文 / 已有 HTML</h2>
+        <div class="actions">
+          <button class="secondary" onclick="loadExample()">示例</button>
+          <button class="danger" onclick="clearAll()">清空</button>
+        </div>
+      </div>
+      <textarea id="input" placeholder="请在这里粘贴公众号原文或已有 HTML。最终文字会以这里为准，PDF 只作为格式参考。"></textarea>
+      <div class="status" id="inputStatus">等待输入</div>
+      <textarea id="pdfText" style="display:none;"></textarea>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header"><h2>官网 HTML 代码</h2></div>
+      <textarea id="output" readonly placeholder="生成后的 HTML 会显示在这里"></textarea>
+      <div class="status" id="outputStatus">等待生成</div>
+    </section>
+  </main>
+
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+    async function extractPdfText() {
+      const file = document.getElementById("pdfFile").files[0];
+      if (!file) { setInputStatus("请先选择 PDF 文件"); return; }
+      setInputStatus("正在读取 PDF，请稍候……");
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const allLines = [];
+
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageLines = groupPdfItemsIntoLines(textContent.items);
+        allLines.push(...pageLines);
+      }
+
+      document.getElementById("pdfText").value = allLines.join("
+");
+      setInputStatus(`PDF 结构已读取：${pdf.numPages} 页，提取 ${allLines.length} 行版式参考文本`);
+      if (!document.getElementById("input").value.trim()) {
+        document.getElementById("input").value = allLines.join("
+");
+        setInputStatus(`PDF 结构已读取，并因主文本为空，已填入 PDF 文本：${pdf.numPages} 页，${allLines.length} 行`);
+      }
+      convertNow();
+    }
+
+    function groupPdfItemsIntoLines(items) {
+      const rows = [];
+      const yTolerance = 3;
+      items.forEach(item => {
+        const text = item.str ? item.str.trim() : "";
+        if (!text) return;
+        const x = item.transform[4];
+        const y = item.transform[5];
+        const fontHeight = Math.abs(item.transform[3] || 0);
+        let row = rows.find(r => Math.abs(r.y - y) <= yTolerance);
+        if (!row) {
+          row = { y, items: [], minX: x, maxX: x, fontHeight };
+          rows.push(row);
+        }
+        row.items.push({ text, x, y, fontHeight });
+        row.minX = Math.min(row.minX, x);
+        row.maxX = Math.max(row.maxX, x);
+        row.fontHeight = Math.max(row.fontHeight, fontHeight);
+      });
+
+      rows.sort((a, b) => b.y - a.y);
+      return rows.map(row => {
+        row.items.sort((a, b) => a.x - b.x);
+        let line = row.items.map(i => i.text).join("");
+        if (looksLikeIndentedList(row, line)) line = "• " + line;
+        if (looksLikeCenteredCaption(row, line)) line = "[[CENTER]]" + line;
+        return line.trim();
+      }).filter(Boolean);
+    }
+
+    function looksLikeIndentedList(row, line) {
+      if (/^[•·●▪-]/.test(line)) return false;
+      if (/^[一二三四五六七八九十]$/.test(line)) return false;
+      if (/^（[一二三四五六七八九十]+）/.test(line)) return false;
+      if (/^\d+(\.\d+)?/.test(line)) return false;
+      const shortListLike = /[；;]$/.test(line) || /等。$/.test(line) || /如下[:：]?$/.test(line);
+      return row.minX > 110 && line.length <= 45 && shortListLike;
+    }
+
+    function looksLikeCenteredCaption(row, line) {
+      const isShort = line.length <= 45;
+      const looksCaption = /主任|主席|合伙人|律师|嘉宾|签署人|见证人|办公室|委员|秘书长|理事长|主持/.test(line);
+      const centered = row.minX > 120 && row.maxX < 520;
+      return isShort && looksCaption && centered;
+    }
+
+    function convertNow() {
+      const input = document.getElementById("input").value;
+      const options = getOptions();
+      const pdfText = document.getElementById("pdfText").value;
+      const output = looksLikeHtml(input)
+        ? normalizeExistingHtml(input, options)
+        : convertPlainTextToHtml(input, options, pdfText);
+      document.getElementById("output").value = output;
+      const inputLines = input.split(/\r?\n/).filter(l => l.trim()).length;
+      const outputParagraphs = (output.match(/<p/g) || []).length;
+      setInputStatus(`已读取 ${inputLines} 行内容`);
+      setOutputStatus(output ? `已生成 ${outputParagraphs} 个段落` : "没有可生成的内容");
+    }
+
+    function getOptions() {
+      return {
+        keepTitle: document.getElementById("keepTitle").checked,
+        keepImages: document.getElementById("keepImages").checked,
+        keepExistingStrong: document.getElementById("keepExistingStrong").checked,
+        usePdfLayout: document.getElementById("usePdfLayout").checked
+      };
+    }
+
+    function looksLikeHtml(text) {
+      return /<p[\s>]|<figure[\s>]|<img[\s>]|<strong[\s>]/i.test(text || "");
+    }
+
+    function normalizeExistingHtml(rawHtml, options) {
+      const doc = new DOMParser().parseFromString(`<div id="root">${rawHtml}</div>`, "text/html");
+      const root = doc.getElementById("root");
+      const result = [];
+
+      root.querySelectorAll("figure, p").forEach((node, index) => {
+        if (node.tagName.toLowerCase() === "figure") {
+          if (options.keepImages) result.push(cleanFigure(node));
+          return;
+        }
+
+        let html = node.innerHTML.trim();
+        html = html.replace(/^(&nbsp;|\s|<br\s*\/?>)+/i, match => match.includes("<br") ? "<br>\n    " : "");
+        html = html.replace(/\s+/g, " ").trim();
+
+        const text = node.textContent.trim();
+        if (!text || shouldIgnoreLine(text)) return;
+        if (!options.keepTitle && index === 0 && looksLikeArticleTitle(text)) return;
+
+        if (!options.keepExistingStrong) {
+          html = escapeHtml(text);
+        } else {
+          html = sanitizeInlineHtml(html);
+        }
+
+        const align = node.getAttribute("style") && /text-align\s*:\s*center/i.test(node.getAttribute("style")) ? ' style="text-align:center;"' : "";
+        result.push(`<p${align}>\n    ${html}\n</p>`);
+      });
+
+      return removeRepeatedBlankLines(result.join("\n"));
+    }
+
+    function cleanFigure(node) {
+      const img = node.querySelector("img");
+      if (!img) return "";
+      const src = img.getAttribute("src") || "";
+      return `<figure class="image image_resized" style="width:75%;">\n    <img src="${escapeAttribute(src)}">\n</figure>`;
+    }
+
+    function sanitizeInlineHtml(html) {
+      return html
+        .replace(/<(?!\/?strong\b|br\s*\/?)[^>]+>/gi, "")
+        .replace(/<strong[^>]*>/gi, "<strong>")
+        .replace(/<br\s*\/?>/gi, "<br>");
+    }
+
+    function convertPlainTextToHtml(rawText, options, pdfText = "") {
+      if (!rawText || !rawText.trim()) return "";
+      const visualLines = preprocessLines(rawText);
+      const pdfLines = options.usePdfLayout && pdfText ? mergeVisualLinesIntoParagraphs(preprocessLines(pdfText)) : [];
+      const lines = buildLinesWithPdfLayout(visualLines, pdfLines);
+      const html = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        let center = false;
+        if (line.startsWith("[[CENTER]]")) {
+          center = true;
+          line = line.replace("[[CENTER]]", "");
+        }
+
+        if (!options.keepTitle && i === 0 && looksLikeArticleTitle(line)) continue;
+
+        if (isSingleChineseSectionNumber(line) && lines[i + 1]) {
+          const mergedTitle = `${line}、${lines[i + 1].replace("[[CENTER]]", "")}`;
+          html.push(makeStrongParagraph(mergedTitle));
+          html.push(makeBlankLine());
+          i++;
+          continue;
+        }
+
+        if (isStrongLine(line, i)) html.push(makeStrongParagraph(line));
+        else if (isBulletLine(line)) html.push(makeBulletParagraph(line));
+        else if (center) html.push(makeCenterParagraph(line));
+        else html.push(makeParagraph(line));
+        html.push(makeBlankLine());
+      }
+      if (html.length > 0) html.pop();
+      return removeRepeatedBlankLines(html.join("\n"));
+    }
+
+
+    function buildLinesWithPdfLayout(sourceLines, pdfLayoutLines) {
+      if (!pdfLayoutLines || pdfLayoutLines.length === 0) {
+        return mergeVisualLinesIntoParagraphs(sourceLines);
+      }
+
+      // 文字以 sourceLines 为准；PDF 只提供“应该怎样分段”的参考。
+      const sourceText = sourceLines.join("
+");
+      const sourceParagraphs = mergeVisualLinesIntoParagraphs(sourceLines);
+
+      // 如果原文本身已经是自然段，优先保留原文分段。
+      if (sourceParagraphs.length <= pdfLayoutLines.length * 1.4) {
+        return sourceParagraphs.map((line, index) => applyLayoutMarker(line, pdfLayoutLines[index] || ""));
+      }
+
+      return sourceParagraphs.map((line, index) => applyLayoutMarker(line, pdfLayoutLines[index] || ""));
+    }
+
+    function applyLayoutMarker(sourceLine, pdfLine) {
+      if (!pdfLine) return sourceLine;
+      let line = sourceLine;
+      if (pdfLine.startsWith("[[CENTER]]") && !line.startsWith("[[CENTER]]")) {
+        line = "[[CENTER]]" + line;
+      }
+      if (isBulletLine(pdfLine) && !isBulletLine(line)) {
+        line = "• " + line;
+      }
+      return line;
+    }
+
+    function mergeVisualLinesIntoParagraphs(lines) {
+      const result = [];
+      let buffer = "";
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const next = lines[i + 1] || "";
+
+        if (shouldStaySingleLine(line)) {
+          flushBuffer();
+          result.push(line);
+          continue;
+        }
+
+        if (!buffer) {
+          buffer = line;
+        } else {
+          buffer += shouldInsertSpaceBetween(buffer, line) ? " " + line : line;
+        }
+
+        if (isNaturalParagraphEnd(line, next)) {
+          flushBuffer();
+        }
+      }
+
+      flushBuffer();
+      return result;
+
+      function flushBuffer() {
+        if (buffer.trim()) {
+          result.push(cleanMergedParagraph(buffer.trim()));
+          buffer = "";
+        }
+      }
+    }
+
+    function shouldStaySingleLine(line) {
+      if (line.startsWith("[[CENTER]]")) return true;
+      if (isSingleChineseSectionNumber(line)) return true;
+      if (isBulletLine(line)) return true;
+      if (/^PART\s+[A-Z]+/.test(line)) return true;
+      if (/^[◼■▪]\s*/.test(line)) return true;
+      if (/^(引言|结语|特别声明|作者介绍|律师简介|律 师 介 绍|作 者 介 绍|FOR FUTURE)$/.test(line)) return true;
+      if (/^（[一二三四五六七八九十]+）/.test(line)) return true;
+      if (/^\d+(\.\d+)?\s*/.test(line) && line.length <= 45) return true;
+      if (/^(图片|留言|写留言)$/.test(line)) return true;
+      return false;
+    }
+
+    function isNaturalParagraphEnd(line, next) {
+      if (!next) return true;
+      if (shouldStaySingleLine(next)) return true;
+      if (/[。！？；;：:]$/.test(line)) return true;
+      if (/[”）)]$/.test(line) && !looksLikeMidSentenceContinuation(next)) return true;
+      return false;
+    }
+
+    function looksLikeMidSentenceContinuation(line) {
+      return /^[，。、；：）)”]/.test(line) || /^(则是|要求|全部|以及|其中|并|或|与|和|的|在|为|将|对|从|到|披露|监管|信息|数据|材料)/.test(line);
+    }
+
+    function shouldInsertSpaceBetween(prev, current) {
+      const last = prev.slice(-1);
+      const first = current.charAt(0);
+      const lastAscii = /[A-Za-z0-9)]/.test(last);
+      const firstAscii = /[A-Za-z0-9(]/.test(first);
+      return lastAscii && firstAscii;
+    }
+
+    function cleanMergedParagraph(text) {
+      return text
+        .replace(/\s+/g, " ")
+        .replace(/([一-龥])\s+([一-龥])/g, "$1$2")
+        .replace(/([，。！？；：、）】》”])\s+/g, "$1")
+        .replace(/\s+([，。！？；：、）】》”])/g, "$1")
+        .replace(/([（【《“])\s+/g, "$1")
+        .replace(/\s+([）】》”])/g, "$1");
+    }
+
+    function preprocessLines(rawText) {
+      return rawText.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0).filter(line => !shouldIgnoreLine(line));
+    }
+
+    function shouldIgnoreLine(line) {
+      const exactIgnore = new Set(["图片", "留言", "写留言", "阅读", "听全文", "原创", "向上滑动阅览", "点击题目查看律师团队其他文章"]);
+      if (exactIgnore.has(line)) return true;
+      if (/^%%.*%%$/.test(line)) return true;
+      if (/^阅读\s*\d*$/.test(line)) return true;
+      if (/^原创\s+/.test(line)) return true;
+      if (/^\d+$/.test(line) && Number(line) < 100000) return true;
+      if (/^\d{2}:\d{2}$/.test(line)) return true;
+      return false;
+    }
+
+    function looksLikeArticleTitle(line) {
+      return /\|\s*大成/.test(line) || /^大成.*\|/.test(line) || line.length > 18 && /大成/.test(line);
+    }
+
+    function isSingleChineseSectionNumber(line) { return /^[一二三四五六七八九十]$/.test(line); }
+
+    function isStrongLine(line, index) {
+      if (index === 0) return true;
+      return (
+        /^(引言|结语|特别声明|作者介绍|律师简介|律 师 介 绍|作 者 介 绍|FOR FUTURE)$/.test(line) ||
+        /^PART\s+[A-Z]+/.test(line) ||
+        /^[◼■▪]\s*/.test(line) ||
+        /^第?[一二三四五六七八九十]+[、.，]/.test(line) ||
+        /^（[一二三四五六七八九十]+）/.test(line) ||
+        /^\d+(\.\d+)?\s*/.test(line) && line.length <= 45 ||
+        /^(万人盛会，滨江起跑|大成出征，挥洒活力|关于大成上海嗨跑俱乐部|加入我们，一起跑！)$/.test(line) ||
+        /^(活动伊始|理论学习结束后|实操热身过后|活动尾声)$/.test(line) ||
+        /^关于.+/.test(line)
+      );
+    }
+
+    function isBulletLine(line) { return /^([•·●▪-])\s*/.test(line); }
+
+    function makeBulletParagraph(line) {
+      const normalized = line.replace(/^[-·●▪]\s*/, "• ");
+      const escaped = escapeHtml(normalized);
+      const converted = escaped.replace(/^(•\s*)([^：:]{1,30}[：:])/, "$1<strong>$2</strong>");
+      return `<p>\n    ${converted}\n</p>`;
+    }
+
+    function makeStrongParagraph(text) { return `<p>\n    <strong>${escapeHtml(text)}</strong>\n</p>`; }
+    function makeParagraph(text) { return `<p>\n    ${escapeHtml(text)}\n</p>`; }
+    function makeCenterParagraph(text) { return `<p style="text-align:center;">\n    ${escapeHtml(text)}\n</p>`; }
+    function makeBlankLine() { return `<p>\n    &nbsp;\n</p>`; }
+
+    function escapeHtml(text) {
+      return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    function escapeAttribute(text) {
+      return String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    function removeRepeatedBlankLines(html) {
+      return html.replace(/(<p>\n    &nbsp;\n<\/p>\n){2,}/g, "<p>\n    &nbsp;\n</p>\n").trim();
+    }
+
+    async function copyOutput() {
+      const output = document.getElementById("output").value;
+      if (!output) { setOutputStatus("请先生成 HTML"); return; }
+      try {
+        await navigator.clipboard.writeText(output);
+        setOutputStatus("已复制到剪贴板");
+      } catch (error) {
+        document.getElementById("output").select();
+        document.execCommand("copy");
+        setOutputStatus("已复制到剪贴板");
+      }
+    }
+
+    function clearAll() {
+      document.getElementById("input").value = "";
+      document.getElementById("output").value = "";
+      document.getElementById("pdfFile").value = "";
+      document.getElementById("pdfText").value = "";
+      setInputStatus("等待输入");
+      setOutputStatus("等待生成");
+    }
+
+    function loadExample() {
+      document.getElementById("input").value = `<p>\n    近日，中国中信金融资产管理股份有限公司（以下简称“中信金资”）联合多家投资机构收购开曼公司H3C Holdings Limited.（以下简称“HPE开曼”）持有的香港企业新華三集團有限公司（H3C Technologies Co., Limited，以下简称“新华三”）部分股权项目，经过近一年的推进，目前已顺利完成相关股份购买协议等交易文件的签约与交割。大成上海律师团队为本交易的全程提供了专业法律支持，助力项目圆满落地。\n</p>\n<p>\n    <br>\n    大成上海律师团队作为本项目的专项法律顾问，由合伙人<strong>付强、卢笛</strong>，律师<strong>万玺、李爽</strong>组成。\n</p>`;
+      convertNow();
+    }
+
+    function setInputStatus(text) { document.getElementById("inputStatus").textContent = text; }
+    function setOutputStatus(text) { document.getElementById("outputStatus").textContent = text; }
+  </script>
+</body>
+</html>
