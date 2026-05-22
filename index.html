@@ -1,548 +1,1142 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>微信公众号文章转官网 HTML 工具</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>微信公众号/PDF文章转官网HTML</title>
   <style>
-    * { box-sizing: border-box; }
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --ink: #20242a;
+      --muted: #667085;
+      --line: #d8dee8;
+      --brand: #1769aa;
+      --brand-dark: #10527f;
+      --accent: #2e7d65;
+      --danger: #b42318;
+      --soft: #eef4fb;
+      --shadow: 0 12px 30px rgba(21, 35, 52, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: #f5f5f7;
-      color: #1f2937;
+      letter-spacing: 0;
     }
-    header {
-      padding: 24px 32px;
-      background: #ffffff;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    header h1 { margin: 0 0 8px; font-size: 24px; font-weight: 700; }
-    header p { margin: 0; color: #6b7280; font-size: 14px; }
-    .toolbar {
-      margin: 18px 32px 0;
-      padding: 16px;
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .toolbar label { font-size: 14px; font-weight: 600; }
-    input[type="file"] { font-size: 14px; }
-    .option {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 14px;
-      color: #374151;
-      background: #f9fafb;
-      padding: 7px 10px;
-      border-radius: 8px;
-      border: 1px solid #e5e7eb;
-    }
-    .tips {
-      margin: 14px 32px 18px;
-      padding: 14px 16px;
-      background: #fff7ed;
-      color: #9a3412;
-      border: 1px solid #fed7aa;
-      border-radius: 12px;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-    .container {
+
+    .app {
+      min-height: 100vh;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      padding: 0 32px 32px;
+      grid-template-rows: auto 1fr;
     }
-    .panel {
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
+
+    header {
+      padding: 18px 24px 14px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      line-height: 1.3;
+      font-weight: 700;
+    }
+
+    .subhead {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+      gap: 16px;
+      padding: 16px;
+      min-height: 0;
+    }
+
+    .pane {
+      min-width: 0;
+      min-height: calc(100vh - 116px);
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
       overflow: hidden;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.04);
     }
-    .panel-header {
+
+    .pane-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 16px;
-      border-bottom: 1px solid #e5e7eb;
-      background: #fafafa;
       gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .pane-title {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .stats {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      display: flex;
       flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
     }
-    .panel-header h2 { margin: 0; font-size: 16px; }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    button {
-      border: none;
-      border-radius: 8px;
-      padding: 8px 12px;
+
+    button,
+    .file-button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 7px;
+      min-height: 36px;
+      padding: 0 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      font-size: 14px;
+      line-height: 1;
       cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      background: #1f2937;
-      color: white;
+      user-select: none;
+      transition: background .15s ease, border-color .15s ease, color .15s ease, transform .08s ease;
     }
-    button.secondary { background: #e5e7eb; color: #111827; }
-    button.danger { background: #ef4444; }
-    button:hover { opacity: 0.9; }
+
+    button:hover,
+    .file-button:hover {
+      border-color: #a9b6c8;
+      background: #f8fafc;
+    }
+
+    button:active,
+    .file-button:active {
+      transform: translateY(1px);
+    }
+
+    .primary {
+      color: #fff;
+      background: var(--brand);
+      border-color: var(--brand);
+    }
+
+    .primary:hover {
+      color: #fff;
+      background: var(--brand-dark);
+      border-color: var(--brand-dark);
+    }
+
+    .success {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .success:hover {
+      color: #fff;
+      background: #246650;
+      border-color: #246650;
+    }
+
+    .ghost-danger {
+      color: var(--danger);
+    }
+
+    input[type="file"] {
+      max-width: 260px;
+      min-height: 36px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    input[type="file"]::file-selector-button {
+      min-height: 34px;
+      margin-right: 10px;
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    input[type="file"]::file-selector-button:hover {
+      border-color: #a9b6c8;
+      background: #f8fafc;
+    }
+
+    .drop-active {
+      outline: 2px solid var(--brand);
+      outline-offset: -4px;
+      background: #f7fbff;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(180px, 1fr));
+      gap: 8px 14px;
+      width: 100%;
+      padding-top: 2px;
+    }
+
+    label.check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #344054;
+      font-size: 13px;
+      min-height: 26px;
+    }
+
+    label.check input {
+      accent-color: var(--brand);
+    }
+
     textarea {
       width: 100%;
-      min-height: 620px;
-      border: none;
-      resize: vertical;
+      min-height: 0;
+      resize: none;
+      border: 0;
+      outline: 0;
       padding: 16px;
-      font-size: 14px;
-      line-height: 1.7;
-      outline: none;
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font: 14px/1.75 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", "Microsoft YaHei", monospace;
+      color: var(--ink);
+      background: #fff;
+      tab-size: 4;
     }
+
+    .output-wrap {
+      min-height: 0;
+      position: relative;
+      display: grid;
+    }
+
+    #output {
+      padding-bottom: 48px;
+    }
+
     .status {
-      padding: 10px 16px;
-      color: #6b7280;
-      font-size: 13px;
-      border-top: 1px solid #e5e7eb;
-      background: #fafafa;
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 10px;
+      padding: 8px 10px;
+      border: 1px solid #c9d8eb;
+      background: var(--soft);
+      color: #27506f;
+      border-radius: 7px;
+      font-size: 12px;
+      line-height: 1.45;
+      pointer-events: none;
     }
-    @media (max-width: 900px) {
-      .container { grid-template-columns: 1fr; padding: 0 16px 16px; }
-      header { padding: 20px 16px; }
-      .toolbar, .tips { margin-left: 16px; margin-right: 16px; }
+
+    .status.error {
+      border-color: #f3b7b2;
+      background: #fff0ee;
+      color: var(--danger);
+    }
+
+    .status.ok {
+      border-color: #b8decf;
+      background: #ecf8f3;
+      color: #20634f;
+    }
+
+    .pdf-debug {
+      width: 100%;
+      max-height: 120px;
+      overflow: auto;
+      padding: 8px 10px;
+      border: 1px solid #d6e2ef;
+      border-radius: 7px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .pdf-debug:empty {
+      display: none;
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      stroke-width: 2;
+      flex: 0 0 auto;
+    }
+
+    @media (max-width: 920px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .pane {
+        min-height: 58vh;
+      }
+    }
+
+    @media (max-width: 560px) {
+      header {
+        padding: 14px 16px;
+      }
+
+      main {
+        padding: 10px;
+      }
+
+      .pane-head,
+      .toolbar {
+        padding-inline: 12px;
+      }
+
+      .options {
+        grid-template-columns: 1fr;
+      }
+
+      button,
+      .file-button {
+        flex: 1 1 auto;
+      }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>微信公众号文章转官网 HTML 工具</h1>
-    <p>支持“双源模式”：粘贴原文保证文字一字不差，上传 PDF 作为版式参考。核心原则：不改写、不润色、不总结，只做结构转换。</p>
-  </header>
+  <div class="app">
+    <header>
+      <h1>微信公众号/PDF文章转官网HTML</h1>
+      <p class="subhead">粘贴文本是最终文字来源；PDF只辅助判断版式。生成时不会改写、润色、补全或纠正正文。</p>
+    </header>
 
-  <section class="toolbar">
-    <label for="pdfFile">上传 PDF 版式参考：</label>
-    <input id="pdfFile" type="file" accept="application/pdf" />
-    <button onclick="extractPdfText()">读取 PDF 结构</button>
-    <button class="secondary" onclick="convertNow()">生成 HTML</button>
-    <button class="secondary" onclick="copyOutput()">复制代码</button>
-    <label class="option"><input type="checkbox" id="usePdfLayout" checked /> 使用 PDF 判断格式</label>
-    <label class="option"><input type="checkbox" id="keepTitle" /> 保留文章标题</label>
-    <label class="option"><input type="checkbox" id="keepImages" /> 保留图片标签</label>
-    <label class="option"><input type="checkbox" id="keepExistingStrong" checked /> 保留原有加粗</label>
-  </section>
+    <main>
+      <section class="pane" aria-label="输入区">
+        <div class="pane-head">
+          <div class="pane-title">原文或已有HTML</div>
+          <div class="stats" id="inputStats">0 字</div>
+        </div>
+        <div class="toolbar">
+          <input id="pdfInput" type="file" accept="application/pdf,.pdf" title="选择PDF文件读取版式结构">
+          <button class="primary" id="generateBtn" type="button" title="按当前文本生成HTML">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+            生成HTML
+          </button>
+          <button class="ghost-danger" id="clearBtn" type="button" title="清空输入和输出">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            清空
+          </button>
+          <div class="options" aria-label="生成选项">
+            <label class="check"><input id="usePdf" type="checkbox" checked> 使用PDF辅助格式</label>
+            <label class="check"><input id="keepTitle" type="checkbox"> 保留文章标题</label>
+            <label class="check"><input id="keepImages" type="checkbox"> 保留图片标签</label>
+            <label class="check"><input id="keepInline" type="checkbox" checked> 保留已有HTML中的strong/i/u</label>
+          </div>
+          <div class="pdf-debug" id="pdfDebug" aria-live="polite"></div>
+        </div>
+        <textarea id="source" spellcheck="false" placeholder="在这里粘贴微信公众号原文、网页复制内容，或已有HTML。"></textarea>
+      </section>
 
-  <div class="tips">
-    建议：把公众号原文或已有 HTML 粘贴到左侧，同时上传 PDF。网站会以左侧原文作为唯一文字来源，保证一字不差；PDF 只用来判断标题、列表、居中说明和段落层级。图片默认忽略，方便你手动上传。
+      <section class="pane" aria-label="输出区">
+        <div class="pane-head">
+          <div class="pane-title">官网编辑器HTML</div>
+          <div class="stats" id="outputStats">0 字</div>
+        </div>
+        <div class="toolbar">
+          <button class="success" id="copyBtn" type="button" title="复制右侧HTML">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            复制HTML
+          </button>
+        </div>
+        <div class="output-wrap">
+          <textarea id="output" spellcheck="false" readonly placeholder="生成后的HTML会显示在这里。"></textarea>
+          <div class="status" id="status">尚未读取PDF。可点击“选择文件”或把PDF拖到页面里；也可以直接粘贴文本生成HTML。</div>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <main class="container">
-    <section class="panel">
-      <div class="panel-header">
-        <h2>主文本：粘贴公众号原文 / 已有 HTML</h2>
-        <div class="actions">
-          <button class="secondary" onclick="loadExample()">示例</button>
-          <button class="danger" onclick="clearAll()">清空</button>
-        </div>
-      </div>
-      <textarea id="input" placeholder="请在这里粘贴公众号原文或已有 HTML。最终文字会以这里为准，PDF 只作为格式参考。"></textarea>
-      <div class="status" id="inputStatus">等待输入</div>
-      <textarea id="pdfText" style="display:none;"></textarea>
-    </section>
-
-    <section class="panel">
-      <div class="panel-header"><h2>官网 HTML 代码</h2></div>
-      <textarea id="output" readonly placeholder="生成后的 HTML 会显示在这里"></textarea>
-      <div class="status" id="outputStatus">等待生成</div>
-    </section>
-  </main>
-
   <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs";
+    const PDFJS_WORKER_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
 
-    async function extractPdfText() {
-      const file = document.getElementById("pdfFile").files[0];
-      if (!file) { setInputStatus("请先选择 PDF 文件"); return; }
-      setInputStatus("正在读取 PDF，请稍候……");
+    const sourceEl = document.getElementById("source");
+    const outputEl = document.getElementById("output");
+    const pdfInputEl = document.getElementById("pdfInput");
+    const inputStatsEl = document.getElementById("inputStats");
+    const outputStatsEl = document.getElementById("outputStats");
+    const statusEl = document.getElementById("status");
+    const usePdfEl = document.getElementById("usePdf");
+    const keepTitleEl = document.getElementById("keepTitle");
+    const keepImagesEl = document.getElementById("keepImages");
+    const keepInlineEl = document.getElementById("keepInline");
+    const pdfDebugEl = document.getElementById("pdfDebug");
 
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      const allLines = [];
+    let pdfModel = null;
+    let pdfLoading = null;
 
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const textContent = await page.getTextContent();
-        const pageLines = groupPdfItemsIntoLines(textContent.items);
-        allLines.push(...pageLines);
-      }
+    const noisePatterns = [
+      /^图片$/,
+      /^图\s*\d*$/,
+      /^留言$/,
+      /^写留言$/,
+      /^阅读\s*\d*$/,
+      /^听全文$/,
+      /^原创$/,
+      /^向上滑动阅览/,
+      /^点击题目查看律师其他文章$/,
+      /^二维码$/,
+      /^公众号底部宣传图$/,
+      /^%%[\s\S]{1,20}%%$/,
+      /^推荐阅读列表?$/,
+      /^推荐阅读$/,
+      /^阅读原文$/,
+      /^微信扫一扫/,
+      /^长按识别二维码/,
+      /^点击蓝字关注/,
+      /^收录于合集/,
+      /^#\s*[\s\S]{1,30}$/
+    ];
 
-      document.getElementById("pdfText").value = allLines.join("
-");
-      setInputStatus(`PDF 结构已读取：${pdf.numPages} 页，提取 ${allLines.length} 行版式参考文本`);
-      if (!document.getElementById("input").value.trim()) {
-        document.getElementById("input").value = allLines.join("
-");
-        setInputStatus(`PDF 结构已读取，并因主文本为空，已填入 PDF 文本：${pdf.numPages} 页，${allLines.length} 行`);
-      }
-      convertNow();
+    const articleKeywordRules = [
+      "USCIS原文", "USCIS 原文", "法律依据", "应对策略", "核心问题", "律师简介",
+      "上榜律师", "团队成员", "项目背景", "交易亮点", "获奖情况", "荣誉介绍", "特别声明"
+    ];
+
+    function setStatus(message, type = "") {
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`.trim();
     }
 
-    function groupPdfItemsIntoLines(items) {
-      const rows = [];
-      const yTolerance = 3;
-      items.forEach(item => {
-        const text = item.str ? item.str.trim() : "";
-        if (!text) return;
-        const x = item.transform[4];
-        const y = item.transform[5];
-        const fontHeight = Math.abs(item.transform[3] || 0);
-        let row = rows.find(r => Math.abs(r.y - y) <= yTolerance);
-        if (!row) {
-          row = { y, items: [], minX: x, maxX: x, fontHeight };
-          rows.push(row);
+    function updatePdfDebug() {
+      if (!pdfModel) {
+        pdfDebugEl.textContent = "";
+        return;
+      }
+      const visualLines = pdfModel.lines
+        .filter((line) => line.visualBold)
+        .slice(0, 10)
+        .map((line) => `P${line.pageNumber} · ${line.visualBoldScore} · ${line.text}`);
+      pdfDebugEl.textContent = visualLines.length
+        ? `视觉加粗候选：\n${visualLines.join("\n")}`
+        : "PDF已读取，但未发现明显视觉加粗行。";
+    }
+
+    function countVisibleChars(value) {
+      return value.replace(/\s/g, "").length;
+    }
+
+    function updateStats() {
+      inputStatsEl.textContent = `${countVisibleChars(sourceEl.value)} 字`;
+      outputStatsEl.textContent = `${outputEl.value.length} 字`;
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function decodeEntities(html) {
+      const textarea = document.createElement("textarea");
+      textarea.innerHTML = html;
+      return textarea.value;
+    }
+
+    function normalizeForMatch(text) {
+      return decodeEntities(text)
+        .replace(/<[^>]*>/g, "")
+        .replace(/\s+/g, "")
+        .replace(/[“”]/g, "\"")
+        .replace(/[‘’]/g, "'")
+        .trim();
+    }
+
+    function getSafeInlineHtml(raw) {
+      const allowed = new Set(["STRONG", "B", "I", "EM", "U", "BR"]);
+      const template = document.createElement("template");
+      template.innerHTML = raw;
+      const walk = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT);
+      const nodes = [];
+      while (walk.nextNode()) nodes.push(walk.currentNode);
+      nodes.reverse().forEach((node) => {
+        if (!allowed.has(node.tagName)) {
+          node.replaceWith(...Array.from(node.childNodes));
+          return;
         }
-        row.items.push({ text, x, y, fontHeight });
-        row.minX = Math.min(row.minX, x);
-        row.maxX = Math.max(row.maxX, x);
-        row.fontHeight = Math.max(row.fontHeight, fontHeight);
+        Array.from(node.attributes).forEach((attr) => node.removeAttribute(attr.name));
+        if (node.tagName === "B") {
+          const strong = document.createElement("strong");
+          strong.innerHTML = node.innerHTML;
+          node.replaceWith(strong);
+        }
+        if (node.tagName === "EM") {
+          const italic = document.createElement("i");
+          italic.innerHTML = node.innerHTML;
+          node.replaceWith(italic);
+        }
+      });
+      return template.innerHTML.replace(/<br\s*\/?>/gi, "\n");
+    }
+
+    function htmlToBlocks(input, keepInline, keepImages) {
+      const hasHtml = /<\/?[a-z][\s\S]*>/i.test(input);
+      if (!hasHtml) return input.split(/\r?\n/).map((text) => ({ text, inlineHtml: null, fromHtml: false }));
+
+      const doc = new DOMParser().parseFromString(input, "text/html");
+      const blocks = [];
+      const blockSelector = "p,div,h1,h2,h3,h4,h5,h6,li,blockquote,section,article";
+      const blockNodes = Array.from(doc.body.querySelectorAll(blockSelector));
+
+      if (keepImages) {
+        Array.from(doc.body.querySelectorAll("img")).forEach((img) => {
+          const src = img.getAttribute("src") || "";
+          if (src && !/qrcode|二维码|wx_fmt|mmbiz/i.test(src)) {
+            blocks.push({ text: "", inlineHtml: `<img src="${escapeHtml(src)}">`, fromHtml: true, image: true });
+          }
+        });
+      }
+
+      if (!blockNodes.length) {
+        const text = doc.body.textContent || "";
+        return text.split(/\r?\n/).map((line) => ({ text: line, inlineHtml: null, fromHtml: true }));
+      }
+
+      blockNodes.forEach((node) => {
+        const rawText = node.textContent || "";
+        const text = rawText.replace(/\u00a0/g, " ").trim();
+        if (!text && !/<br/i.test(node.innerHTML)) return;
+        const inlineHtml = keepInline ? getSafeInlineHtml(node.innerHTML).trim() : null;
+        const tag = node.tagName.toLowerCase();
+        blocks.push({ text, inlineHtml, fromHtml: true, tag });
       });
 
-      rows.sort((a, b) => b.y - a.y);
-      return rows.map(row => {
-        row.items.sort((a, b) => a.x - b.x);
-        let line = row.items.map(i => i.text).join("");
-        if (looksLikeIndentedList(row, line)) line = "• " + line;
-        if (looksLikeCenteredCaption(row, line)) line = "[[CENTER]]" + line;
-        return line.trim();
-      }).filter(Boolean);
+      return blocks;
     }
 
-    function looksLikeIndentedList(row, line) {
-      if (/^[•·●▪-]/.test(line)) return false;
-      if (/^[一二三四五六七八九十]$/.test(line)) return false;
-      if (/^（[一二三四五六七八九十]+）/.test(line)) return false;
-      if (/^\d+(\.\d+)?/.test(line)) return false;
-      const shortListLike = /[；;]$/.test(line) || /等。$/.test(line) || /如下[:：]?$/.test(line);
-      return row.minX > 110 && line.length <= 45 && shortListLike;
-    }
+    function cleanBlocks(blocks) {
+      const cleaned = [];
+      let inRecommended = false;
+      let inBioSection = false;
 
-    function looksLikeCenteredCaption(row, line) {
-      const isShort = line.length <= 45;
-      const looksCaption = /主任|主席|合伙人|律师|嘉宾|签署人|见证人|办公室|委员|秘书长|理事长|主持/.test(line);
-      const centered = row.minX > 120 && row.maxX < 520;
-      return isShort && looksCaption && centered;
-    }
-
-    function convertNow() {
-      const input = document.getElementById("input").value;
-      const options = getOptions();
-      const pdfText = document.getElementById("pdfText").value;
-      const output = looksLikeHtml(input)
-        ? normalizeExistingHtml(input, options)
-        : convertPlainTextToHtml(input, options, pdfText);
-      document.getElementById("output").value = output;
-      const inputLines = input.split(/\r?\n/).filter(l => l.trim()).length;
-      const outputParagraphs = (output.match(/<p/g) || []).length;
-      setInputStatus(`已读取 ${inputLines} 行内容`);
-      setOutputStatus(output ? `已生成 ${outputParagraphs} 个段落` : "没有可生成的内容");
-    }
-
-    function getOptions() {
-      return {
-        keepTitle: document.getElementById("keepTitle").checked,
-        keepImages: document.getElementById("keepImages").checked,
-        keepExistingStrong: document.getElementById("keepExistingStrong").checked,
-        usePdfLayout: document.getElementById("usePdfLayout").checked
-      };
-    }
-
-    function looksLikeHtml(text) {
-      return /<p[\s>]|<figure[\s>]|<img[\s>]|<strong[\s>]/i.test(text || "");
-    }
-
-    function normalizeExistingHtml(rawHtml, options) {
-      const doc = new DOMParser().parseFromString(`<div id="root">${rawHtml}</div>`, "text/html");
-      const root = doc.getElementById("root");
-      const result = [];
-
-      root.querySelectorAll("figure, p").forEach((node, index) => {
-        if (node.tagName.toLowerCase() === "figure") {
-          if (options.keepImages) result.push(cleanFigure(node));
+      blocks.forEach((block) => {
+        if (block.image) {
+          cleaned.push(block);
           return;
         }
 
-        let html = node.innerHTML.trim();
-        html = html.replace(/^(&nbsp;|\s|<br\s*\/?>)+/i, match => match.includes("<br") ? "<br>\n    " : "");
-        html = html.replace(/\s+/g, " ").trim();
-
-        const text = node.textContent.trim();
-        if (!text || shouldIgnoreLine(text)) return;
-        if (!options.keepTitle && index === 0 && looksLikeArticleTitle(text)) return;
-
-        if (!options.keepExistingStrong) {
-          html = escapeHtml(text);
-        } else {
-          html = sanitizeInlineHtml(html);
+        const text = (block.text || "").replace(/\u200b/g, "").trim();
+        if (/^特别声明[:：]?$/.test(text)) {
+          inRecommended = false;
+          inBioSection = false;
+          cleaned.push({ ...block, text });
+          return;
         }
+        if (/^律师简介$/.test(text)) {
+          inBioSection = true;
+          return;
+        }
+        if (inBioSection) return;
+        if (/^推荐阅读/.test(text) || /^向上滑动阅览/.test(text)) {
+          inRecommended = true;
+          return;
+        }
+        if (inRecommended) return;
+        if (noisePatterns.some((pattern) => pattern.test(text))) return;
 
-        const align = node.getAttribute("style") && /text-align\s*:\s*center/i.test(node.getAttribute("style")) ? ' style="text-align:center;"' : "";
-        result.push(`<p${align}>\n    ${html}\n</p>`);
+        cleaned.push({ ...block, text });
       });
 
-      return removeRepeatedBlankLines(result.join("\n"));
+      while (cleaned.length && !cleaned[0].text && !cleaned[0].image) cleaned.shift();
+      while (cleaned.length && !cleaned[cleaned.length - 1].text && !cleaned[cleaned.length - 1].image) cleaned.pop();
+      return normalizeBlocks(cleaned);
     }
 
-    function cleanFigure(node) {
-      const img = node.querySelector("img");
-      if (!img) return "";
-      const src = img.getAttribute("src") || "";
-      return `<figure class="image image_resized" style="width:75%;">\n    <img src="${escapeAttribute(src)}">\n</figure>`;
-    }
+    function normalizeBlocks(blocks) {
+      const merged = [];
+      for (let index = 0; index < blocks.length; index++) {
+        const block = blocks[index];
+        const text = block.text || "";
 
-    function sanitizeInlineHtml(html) {
-      return html
-        .replace(/<(?!\/?strong\b|br\s*\/?)[^>]+>/gi, "")
-        .replace(/<strong[^>]*>/gi, "<strong>")
-        .replace(/<br\s*\/?>/gi, "<br>");
-    }
-
-    function convertPlainTextToHtml(rawText, options, pdfText = "") {
-      if (!rawText || !rawText.trim()) return "";
-      const visualLines = preprocessLines(rawText);
-      const pdfLines = options.usePdfLayout && pdfText ? mergeVisualLinesIntoParagraphs(preprocessLines(pdfText)) : [];
-      const lines = buildLinesWithPdfLayout(visualLines, pdfLines);
-      const html = [];
-
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-        let center = false;
-        if (line.startsWith("[[CENTER]]")) {
-          center = true;
-          line = line.replace("[[CENTER]]", "");
+        if (/^[一二三四五六七八九十]$/.test(text)) {
+          let nextIndex = index + 1;
+          while (nextIndex < blocks.length && isBlankBlock(blocks[nextIndex])) nextIndex++;
+          const next = blocks[nextIndex];
+          const nextText = next?.text || "";
+          if (nextText) {
+            merged.push({ ...next, text: `${text}、${stripLeadingBullet(nextText)}`, inlineHtml: null, syntheticHeading: true });
+            index = nextIndex;
+            continue;
+          }
         }
 
-        if (!options.keepTitle && i === 0 && looksLikeArticleTitle(line)) continue;
-
-        if (isSingleChineseSectionNumber(line) && lines[i + 1]) {
-          const mergedTitle = `${line}、${lines[i + 1].replace("[[CENTER]]", "")}`;
-          html.push(makeStrongParagraph(mergedTitle));
-          html.push(makeBlankLine());
-          i++;
+        if (isBlankBlock(block)) {
+          merged.push(block);
           continue;
         }
 
-        if (isStrongLine(line, i)) html.push(makeStrongParagraph(line));
-        else if (isBulletLine(line)) html.push(makeBulletParagraph(line));
-        else if (center) html.push(makeCenterParagraph(line));
-        else html.push(makeParagraph(line));
-        html.push(makeBlankLine());
-      }
-      if (html.length > 0) html.pop();
-      return removeRepeatedBlankLines(html.join("\n"));
-    }
-
-
-    function buildLinesWithPdfLayout(sourceLines, pdfLayoutLines) {
-      if (!pdfLayoutLines || pdfLayoutLines.length === 0) {
-        return mergeVisualLinesIntoParagraphs(sourceLines);
+        merged.push({ ...block, text: stripLeadingBullet(text) });
       }
 
-      // 文字以 sourceLines 为准；PDF 只提供“应该怎样分段”的参考。
-      const sourceText = sourceLines.join("
-");
-      const sourceParagraphs = mergeVisualLinesIntoParagraphs(sourceLines);
-
-      // 如果原文本身已经是自然段，优先保留原文分段。
-      if (sourceParagraphs.length <= pdfLayoutLines.length * 1.4) {
-        return sourceParagraphs.map((line, index) => applyLayoutMarker(line, pdfLayoutLines[index] || ""));
-      }
-
-      return sourceParagraphs.map((line, index) => applyLayoutMarker(line, pdfLayoutLines[index] || ""));
-    }
-
-    function applyLayoutMarker(sourceLine, pdfLine) {
-      if (!pdfLine) return sourceLine;
-      let line = sourceLine;
-      if (pdfLine.startsWith("[[CENTER]]") && !line.startsWith("[[CENTER]]")) {
-        line = "[[CENTER]]" + line;
-      }
-      if (isBulletLine(pdfLine) && !isBulletLine(line)) {
-        line = "• " + line;
-      }
-      return line;
-    }
-
-    function mergeVisualLinesIntoParagraphs(lines) {
-      const result = [];
-      let buffer = "";
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const next = lines[i + 1] || "";
-
-        if (shouldStaySingleLine(line)) {
-          flushBuffer();
-          result.push(line);
-          continue;
+      const compact = [];
+      merged.forEach((block, index) => {
+        if (isBlankBlock(block)) {
+          const previous = compact[compact.length - 1];
+          const next = merged.slice(index + 1).find((candidate) => !isBlankBlock(candidate));
+          if (!previous || isBlankBlock(previous)) return;
+          if (isHeadingBlock(previous)) return;
+          if (!next) return;
+          compact.push({ text: "", inlineHtml: null, fromHtml: block.fromHtml });
+          return;
         }
+        compact.push(block);
+      });
 
-        if (!buffer) {
-          buffer = line;
-        } else {
-          buffer += shouldInsertSpaceBetween(buffer, line) ? " " + line : line;
-        }
+      while (compact.length && isBlankBlock(compact[0])) compact.shift();
+      while (compact.length && isBlankBlock(compact[compact.length - 1])) compact.pop();
+      return compact;
+    }
 
-        if (isNaturalParagraphEnd(line, next)) {
-          flushBuffer();
-        }
+    function isBlankBlock(block) {
+      return !block || (!block.image && !(block.text || "").trim());
+    }
+
+    function stripLeadingBullet(text) {
+      return (text || "").replace(/^[•·●▪*-]\s*/, "").trim();
+    }
+
+    function isHeadingBlock(block) {
+      const text = block?.text || "";
+      return !!block?.syntheticHeading || isStrongHeading(stripLeadingBullet(text)) || isNumberedInlineHeading(stripLeadingBullet(text));
+    }
+
+    async function loadPdfJs() {
+      const pdfjsLib = await import(PDFJS_URL);
+      pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+      return pdfjsLib;
+    }
+
+    async function handlePdfFile(file) {
+      if (!file) return;
+      const looksLikePdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name || "");
+      if (!looksLikePdf) {
+        setStatus("请选择或拖入PDF文件。", "error");
+        return;
       }
-
-      flushBuffer();
-      return result;
-
-      function flushBuffer() {
-        if (buffer.trim()) {
-          result.push(cleanMergedParagraph(buffer.trim()));
-          buffer = "";
-        }
-      }
-    }
-
-    function shouldStaySingleLine(line) {
-      if (line.startsWith("[[CENTER]]")) return true;
-      if (isSingleChineseSectionNumber(line)) return true;
-      if (isBulletLine(line)) return true;
-      if (/^PART\s+[A-Z]+/.test(line)) return true;
-      if (/^[◼■▪]\s*/.test(line)) return true;
-      if (/^(引言|结语|特别声明|作者介绍|律师简介|律 师 介 绍|作 者 介 绍|FOR FUTURE)$/.test(line)) return true;
-      if (/^（[一二三四五六七八九十]+）/.test(line)) return true;
-      if (/^\d+(\.\d+)?\s*/.test(line) && line.length <= 45) return true;
-      if (/^(图片|留言|写留言)$/.test(line)) return true;
-      return false;
-    }
-
-    function isNaturalParagraphEnd(line, next) {
-      if (!next) return true;
-      if (shouldStaySingleLine(next)) return true;
-      if (/[。！？；;：:]$/.test(line)) return true;
-      if (/[”）)]$/.test(line) && !looksLikeMidSentenceContinuation(next)) return true;
-      return false;
-    }
-
-    function looksLikeMidSentenceContinuation(line) {
-      return /^[，。、；：）)”]/.test(line) || /^(则是|要求|全部|以及|其中|并|或|与|和|的|在|为|将|对|从|到|披露|监管|信息|数据|材料)/.test(line);
-    }
-
-    function shouldInsertSpaceBetween(prev, current) {
-      const last = prev.slice(-1);
-      const first = current.charAt(0);
-      const lastAscii = /[A-Za-z0-9)]/.test(last);
-      const firstAscii = /[A-Za-z0-9(]/.test(first);
-      return lastAscii && firstAscii;
-    }
-
-    function cleanMergedParagraph(text) {
-      return text
-        .replace(/\s+/g, " ")
-        .replace(/([一-龥])\s+([一-龥])/g, "$1$2")
-        .replace(/([，。！？；：、）】》”])\s+/g, "$1")
-        .replace(/\s+([，。！？；：、）】》”])/g, "$1")
-        .replace(/([（【《“])\s+/g, "$1")
-        .replace(/\s+([）】》”])/g, "$1");
-    }
-
-    function preprocessLines(rawText) {
-      return rawText.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0).filter(line => !shouldIgnoreLine(line));
-    }
-
-    function shouldIgnoreLine(line) {
-      const exactIgnore = new Set(["图片", "留言", "写留言", "阅读", "听全文", "原创", "向上滑动阅览", "点击题目查看律师团队其他文章"]);
-      if (exactIgnore.has(line)) return true;
-      if (/^%%.*%%$/.test(line)) return true;
-      if (/^阅读\s*\d*$/.test(line)) return true;
-      if (/^原创\s+/.test(line)) return true;
-      if (/^\d+$/.test(line) && Number(line) < 100000) return true;
-      if (/^\d{2}:\d{2}$/.test(line)) return true;
-      return false;
-    }
-
-    function looksLikeArticleTitle(line) {
-      return /\|\s*大成/.test(line) || /^大成.*\|/.test(line) || line.length > 18 && /大成/.test(line);
-    }
-
-    function isSingleChineseSectionNumber(line) { return /^[一二三四五六七八九十]$/.test(line); }
-
-    function isStrongLine(line, index) {
-      if (index === 0) return true;
-      return (
-        /^(引言|结语|特别声明|作者介绍|律师简介|律 师 介 绍|作 者 介 绍|FOR FUTURE)$/.test(line) ||
-        /^PART\s+[A-Z]+/.test(line) ||
-        /^[◼■▪]\s*/.test(line) ||
-        /^第?[一二三四五六七八九十]+[、.，]/.test(line) ||
-        /^（[一二三四五六七八九十]+）/.test(line) ||
-        /^\d+(\.\d+)?\s*/.test(line) && line.length <= 45 ||
-        /^(万人盛会，滨江起跑|大成出征，挥洒活力|关于大成上海嗨跑俱乐部|加入我们，一起跑！)$/.test(line) ||
-        /^(活动伊始|理论学习结束后|实操热身过后|活动尾声)$/.test(line) ||
-        /^关于.+/.test(line)
-      );
-    }
-
-    function isBulletLine(line) { return /^([•·●▪-])\s*/.test(line); }
-
-    function makeBulletParagraph(line) {
-      const normalized = line.replace(/^[-·●▪]\s*/, "• ");
-      const escaped = escapeHtml(normalized);
-      const converted = escaped.replace(/^(•\s*)([^：:]{1,30}[：:])/, "$1<strong>$2</strong>");
-      return `<p>\n    ${converted}\n</p>`;
-    }
-
-    function makeStrongParagraph(text) { return `<p>\n    <strong>${escapeHtml(text)}</strong>\n</p>`; }
-    function makeParagraph(text) { return `<p>\n    ${escapeHtml(text)}\n</p>`; }
-    function makeCenterParagraph(text) { return `<p style="text-align:center;">\n    ${escapeHtml(text)}\n</p>`; }
-    function makeBlankLine() { return `<p>\n    &nbsp;\n</p>`; }
-
-    function escapeHtml(text) {
-      return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-    function escapeAttribute(text) {
-      return String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-    function removeRepeatedBlankLines(html) {
-      return html.replace(/(<p>\n    &nbsp;\n<\/p>\n){2,}/g, "<p>\n    &nbsp;\n</p>\n").trim();
-    }
-
-    async function copyOutput() {
-      const output = document.getElementById("output").value;
-      if (!output) { setOutputStatus("请先生成 HTML"); return; }
       try {
-        await navigator.clipboard.writeText(output);
-        setOutputStatus("已复制到剪贴板");
+        pdfLoading = readPdf(file);
+        pdfModel = await pdfLoading;
+        updatePdfDebug();
       } catch (error) {
-        document.getElementById("output").select();
-        document.execCommand("copy");
-        setOutputStatus("已复制到剪贴板");
+        console.error(error);
+        pdfModel = null;
+        updatePdfDebug();
+        setStatus("PDF读取失败。请检查网络是否能加载pdf.js，或直接按主文本生成HTML。", "error");
+      } finally {
+        pdfLoading = null;
       }
     }
 
-    function clearAll() {
-      document.getElementById("input").value = "";
-      document.getElementById("output").value = "";
-      document.getElementById("pdfFile").value = "";
-      document.getElementById("pdfText").value = "";
-      setInputStatus("等待输入");
-      setOutputStatus("等待生成");
+    async function readPdf(file) {
+      setStatus("正在读取PDF版式结构...");
+      const pdfjsLib = await loadPdfJs();
+      const buffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+      const pages = [];
+      const allLines = [];
+      const fontSizes = [];
+
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        const page = await pdf.getPage(pageNumber);
+        setStatus(`正在读取PDF版式结构...第 ${pageNumber}/${pdf.numPages} 页`);
+        const content = await page.getTextContent({ includeMarkedContent: true });
+        const items = content.items
+          .filter((item) => item.str && item.str.trim())
+          .map((item) => {
+            const transform = item.transform || [1, 0, 0, 1, 0, 0];
+            const fontSize = Math.abs(transform[3]) || item.height || 12;
+            fontSizes.push(fontSize);
+            return {
+              text: item.str,
+              x: transform[4],
+              y: transform[5],
+              fontName: item.fontName || "",
+              fontFamily: item.fontFamily || "",
+              fontSize,
+              transform,
+              width: item.width || Math.max(item.str.length * fontSize * 0.52, fontSize)
+            };
+          });
+
+        const lines = mergeItemsIntoLines(items, pageNumber);
+        await addVisualBoldSignals(page, lines);
+        pages.push({ pageNumber, items, lines });
+        allLines.push(...lines);
+      }
+
+      const sortedSizes = fontSizes.slice().sort((a, b) => a - b);
+      const medianSize = sortedSizes[Math.floor(sortedSizes.length / 2)] || 12;
+      const model = {
+        pages,
+        lines: allLines,
+        medianSize,
+        structures: buildPdfStructures(allLines, medianSize)
+      };
+      const visualBoldCount = allLines.filter((line) => line.visualBold).length;
+      setStatus(`PDF已读取：${pdf.numPages}页，识别到${allLines.length}行版式信息，其中${visualBoldCount}行带视觉加粗信号。`, "ok");
+      return model;
     }
 
-    function loadExample() {
-      document.getElementById("input").value = `<p>\n    近日，中国中信金融资产管理股份有限公司（以下简称“中信金资”）联合多家投资机构收购开曼公司H3C Holdings Limited.（以下简称“HPE开曼”）持有的香港企业新華三集團有限公司（H3C Technologies Co., Limited，以下简称“新华三”）部分股权项目，经过近一年的推进，目前已顺利完成相关股份购买协议等交易文件的签约与交割。大成上海律师团队为本交易的全程提供了专业法律支持，助力项目圆满落地。\n</p>\n<p>\n    <br>\n    大成上海律师团队作为本项目的专项法律顾问，由合伙人<strong>付强、卢笛</strong>，律师<strong>万玺、李爽</strong>组成。\n</p>`;
-      convertNow();
+    async function addVisualBoldSignals(page, lines) {
+      if (!lines.length) return;
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return;
+
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      context.fillStyle = "#fff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: context, viewport }).promise;
+
+      const lineSamples = lines.map((line) => {
+        const box = getLineCanvasBox(line, viewport, canvas);
+        const metrics = sampleInkMetrics(context, box);
+        line.visualMetrics = metrics;
+        return { line, metrics };
+      }).filter((sample) => sample.metrics.inkPixels > 8);
+
+      if (!lineSamples.length) return;
+      const bodySamples = lineSamples.filter(({ line }) => {
+        const textLength = line.text.replace(/\s/g, "").length;
+        return textLength >= 8 && line.fontSize <= (lineSamples.reduce((sum, sample) => sum + sample.line.fontSize, 0) / lineSamples.length) * 1.25;
+      });
+      const baselinePool = bodySamples.length >= 4 ? bodySamples : lineSamples;
+      const densityMedian = median(baselinePool.map((sample) => sample.metrics.inkDensity));
+      const strokeMedian = median(baselinePool.map((sample) => sample.metrics.strokeScore));
+      const darknessMedian = median(baselinePool.map((sample) => sample.metrics.darkness));
+
+      lineSamples.forEach(({ line, metrics }) => {
+        const densityLift = densityMedian ? metrics.inkDensity / densityMedian : 1;
+        const strokeLift = strokeMedian ? metrics.strokeScore / strokeMedian : 1;
+        const darknessLift = darknessMedian ? metrics.darkness / darknessMedian : 1;
+        const shortEmphasis = line.text.replace(/\s/g, "").length <= 32;
+        const visuallyHeavy = densityLift >= 1.18 && strokeLift >= 1.08 && darknessLift >= 0.98;
+        const veryHeavy = densityLift >= 1.28 || strokeLift >= 1.22;
+        line.visualBold = visuallyHeavy || (shortEmphasis && veryHeavy);
+        line.visualBoldScore = Number(((densityLift + strokeLift + darknessLift) / 3).toFixed(2));
+      });
     }
 
-    function setInputStatus(text) { document.getElementById("inputStatus").textContent = text; }
-    function setOutputStatus(text) { document.getElementById("outputStatus").textContent = text; }
+    function getLineCanvasBox(line, viewport, canvas) {
+      const leftPdf = Math.max(line.x - 2, 0);
+      const topPdf = line.y + line.fontSize * 1.25;
+      const rightPdf = Math.max(line.x + line.width + 6, leftPdf + line.fontSize);
+      const bottomPdf = Math.max(line.y - line.fontSize * 0.45, 0);
+      const p1 = viewport.convertToViewportPoint(leftPdf, topPdf);
+      const p2 = viewport.convertToViewportPoint(rightPdf, bottomPdf);
+      const left = Math.max(0, Math.floor(Math.min(p1[0], p2[0])));
+      const top = Math.max(0, Math.floor(Math.min(p1[1], p2[1])));
+      const right = Math.min(canvas.width, Math.ceil(Math.max(p1[0], p2[0])));
+      const bottom = Math.min(canvas.height, Math.ceil(Math.max(p1[1], p2[1])));
+      return {
+        left,
+        top,
+        width: Math.max(1, right - left),
+        height: Math.max(1, bottom - top)
+      };
+    }
+
+    function sampleInkMetrics(context, box) {
+      const data = context.getImageData(box.left, box.top, box.width, box.height).data;
+      let inkPixels = 0;
+      let darknessSum = 0;
+      let edgePixels = 0;
+      let occupiedRows = 0;
+      let occupiedCols = 0;
+
+      for (let y = 0; y < box.height; y++) {
+        let rowHasInk = false;
+        for (let x = 0; x < box.width; x++) {
+          const index = (y * box.width + x) * 4;
+          const alpha = data[index + 3] / 255;
+          const gray = (data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114);
+          const darkness = Math.max(0, (255 - gray) / 255) * alpha;
+          if (darkness > 0.22) {
+            inkPixels++;
+            darknessSum += darkness;
+            rowHasInk = true;
+            const rightIndex = x < box.width - 1 ? (y * box.width + x + 1) * 4 : index;
+            const rightGray = (data[rightIndex] * 0.299 + data[rightIndex + 1] * 0.587 + data[rightIndex + 2] * 0.114);
+            if (Math.abs(gray - rightGray) > 35) edgePixels++;
+          }
+        }
+        if (rowHasInk) occupiedRows++;
+      }
+
+      for (let x = 0; x < box.width; x++) {
+        let colHasInk = false;
+        for (let y = 0; y < box.height; y++) {
+          const index = (y * box.width + x) * 4;
+          const gray = (data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114);
+          if ((255 - gray) / 255 > 0.22) {
+            colHasInk = true;
+            break;
+          }
+        }
+        if (colHasInk) occupiedCols++;
+      }
+
+      const occupiedArea = Math.max(1, occupiedRows * occupiedCols);
+      const inkDensity = inkPixels / occupiedArea;
+      const darkness = darknessSum / Math.max(1, inkPixels);
+      const strokeScore = inkPixels / Math.max(1, edgePixels);
+      return { inkPixels, inkDensity, darkness, strokeScore };
+    }
+
+    function median(values) {
+      const sorted = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+      if (!sorted.length) return 0;
+      const middle = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+    }
+
+    function mergeItemsIntoLines(items, pageNumber) {
+      const yTolerance = 3.2;
+      const groups = [];
+      items
+        .slice()
+        .sort((a, b) => b.y - a.y || a.x - b.x)
+        .forEach((item) => {
+          let group = groups.find((line) => Math.abs(line.y - item.y) <= yTolerance);
+          if (!group) {
+            group = { pageNumber, y: item.y, items: [] };
+            groups.push(group);
+          }
+          group.items.push(item);
+          group.y = (group.y * (group.items.length - 1) + item.y) / group.items.length;
+        });
+
+      return groups
+        .map((group) => {
+          const sorted = group.items.sort((a, b) => a.x - b.x);
+          const text = sorted.map((item, index) => {
+            if (!index) return item.text;
+            const previous = sorted[index - 1];
+            const estimatedGap = item.x - previous.x - (previous.text.length * previous.fontSize * 0.48);
+            return estimatedGap > previous.fontSize * 0.55 ? ` ${item.text}` : item.text;
+          }).join("").trim();
+          const maxSize = Math.max(...sorted.map((item) => item.fontSize));
+          const minX = Math.min(...sorted.map((item) => item.x));
+          const maxX = Math.max(...sorted.map((item) => item.x + Math.max(item.width || 0, item.text.length * item.fontSize * 0.52)));
+          const fontNames = sorted.map((item) => `${item.fontName} ${item.fontFamily}`).join(" ");
+          return {
+            pageNumber,
+            text,
+            normalized: normalizeForMatch(text),
+            y: group.y,
+            x: minX,
+            width: maxX - minX,
+            centerX: minX + (maxX - minX) / 2,
+            fontSize: maxSize,
+            fontNames,
+            bold: /bold|black|heavy|semibold|medium|方正兰亭黑|黑体|SimHei/i.test(fontNames),
+            visualBold: false,
+            visualBoldScore: 0
+          };
+        })
+        .filter((line) => line.text)
+        .sort((a, b) => a.pageNumber - b.pageNumber || b.y - a.y);
+    }
+
+    function buildPdfStructures(lines, medianSize) {
+      const pageGroups = new Map();
+      lines.forEach((line) => {
+        if (!pageGroups.has(line.pageNumber)) pageGroups.set(line.pageNumber, []);
+        pageGroups.get(line.pageNumber).push(line);
+      });
+
+      const structures = [];
+      pageGroups.forEach((pageLines) => {
+        const sorted = pageLines.slice().sort((a, b) => b.y - a.y);
+        sorted.forEach((line, index) => {
+          const next = sorted[index + 1];
+          const prev = sorted[index - 1];
+          const gapAfter = next ? line.y - next.y : 0;
+          const gapBefore = prev ? prev.y - line.y : 0;
+          structures.push({
+            text: line.text,
+            normalized: line.normalized,
+            bold: line.bold || line.visualBold || line.fontSize >= medianSize * 1.12,
+            visualBold: line.visualBold,
+            visualBoldScore: line.visualBoldScore,
+            italicQuote: isLegalOrEnglishQuote(line.text),
+            list: isLikelyList(line.text, line.x),
+            centered: isLikelyCentered(line, pageLines),
+            titleLike: isLikelyHeading(line.text, line.fontSize, medianSize, gapBefore, gapAfter)
+          });
+        });
+      });
+
+      return structures;
+    }
+
+    function isLikelyHeading(text, fontSize, medianSize, gapBefore, gapAfter) {
+      const trimmed = text.trim();
+      if (/^(第[一二三四五六七八九十百]+[章节部分]|[一二三四五六七八九十]+、|（[一二三四五六七八九十]+）|\d+[.．、])/.test(trimmed)) return true;
+      if (articleKeywordRules.some((word) => trimmed.includes(word)) && trimmed.length <= 35) return true;
+      return trimmed.length <= 32 && fontSize >= medianSize * 1.12 && (gapBefore > medianSize * 1.25 || gapAfter > medianSize * 1.25);
+    }
+
+    function isLegalOrEnglishQuote(text) {
+      const trimmed = text.trim();
+      const ascii = (trimmed.match(/[A-Za-z]/g) || []).length;
+      const total = trimmed.replace(/\s/g, "").length || 1;
+      return /USCIS\s*原文|英文原文|原文[:：]?$/i.test(trimmed) || (ascii / total > 0.65 && trimmed.length > 18);
+    }
+
+    function isLikelyList(text, x) {
+      const trimmed = text.trim();
+      return /^[•·●▪*-]\s*/.test(trimmed)
+        || /^\d+[.．、]\s*\S+/.test(trimmed)
+        || /^[（(][一二三四五六七八九十\d]+[）)]/.test(trimmed)
+        || (x > 58 && trimmed.length <= 48 && /[;；]$/.test(trimmed));
+    }
+
+    function isLikelyCentered(line, pageLines) {
+      const pageWidthGuess = Math.max(...pageLines.map((item) => item.centerX + item.width / 2), 595);
+      const pageCenter = pageWidthGuess / 2;
+      const shortLine = line.text.length <= 30;
+      return shortLine && Math.abs(line.centerX - pageCenter) < 38 && line.x > 90;
+    }
+
+    function findPdfHint(text) {
+      if (!pdfModel || !text) return null;
+      const key = normalizeForMatch(text);
+      if (!key) return null;
+      const exact = pdfModel.structures.find((item) => item.normalized === key);
+      if (exact) return exact;
+      return pdfModel.structures.find((item) => {
+        if (!item.normalized) return false;
+        return key.length >= 8 && (item.normalized.includes(key) || key.includes(item.normalized));
+      }) || null;
+    }
+
+    function classifyBlock(block, index, blocks, options) {
+      if (block.image) return { type: "image" };
+      const text = block.text || "";
+      const trimmed = text.trim();
+      const pdfHint = options.usePdf ? findPdfHint(trimmed) : null;
+      const tag = block.tag || "";
+
+      if (!trimmed) return { type: "blank" };
+      if (!options.keepTitle && index === 0 && isArticleTitle(trimmed, blocks)) return { type: "drop" };
+      if (/^h[1-6]$/.test(tag)) return { type: "strong" };
+      if (pdfHint?.italicQuote || isLegalOrEnglishQuote(trimmed)) return { type: "quote" };
+      if (pdfHint?.centered || isCenteredText(trimmed, blocks, index)) return { type: "center" };
+      if (isNumberedInlineHeading(trimmed)) return { type: "inline-heading" };
+      if (isStrongHeading(trimmed) || block.syntheticHeading) return { type: "strong" };
+      if (tag === "li" && isStrongHeading(trimmed)) return { type: "strong" };
+      if (tag === "li") return { type: "list" };
+      if ((pdfHint?.list || isTextList(trimmed)) && !isStrongHeading(trimmed)) return { type: "list" };
+      if (pdfHint?.titleLike || ((pdfHint?.bold || pdfHint?.visualBold) && trimmed.length <= 70) || isStrongHeading(trimmed)) return { type: "strong" };
+      if (hasLeadingKeyword(trimmed)) return { type: "keyword" };
+      return { type: "normal" };
+    }
+
+    function isArticleTitle(text, blocks) {
+      const laterText = blocks.slice(1, 5).map((block) => block.text || "").join("");
+      return text.length >= 4 && text.length <= 48 && laterText.length > 15 && !/^[一二三四五六七八九十]+、|^（[一二三四五六七八九十]+）|^\d+[.．、]/.test(text);
+    }
+
+    function isStrongHeading(text) {
+      return /^(第[一二三四五六七八九十百]+[章节部分]|[一二三四五六七八九十]+、|（[一二三四五六七八九十]+）)/.test(text)
+        || (articleKeywordRules.some((word) => text.includes(word)) && text.length <= 35);
+    }
+
+    function isNumberedInlineHeading(text) {
+      return /^\d+[.．]\s*[一二三四五六七八九十]+是[\s\S]{4,60}[。.]?/.test(text);
+    }
+
+    function hasLeadingKeyword(text) {
+      return /^.{1,12}[:：]/.test(text) && /^(核心问题|法律依据|应对策略|关键词|提示|建议|结论|背景|亮点|团队|成员|律师|客户|项目|时间|地点)[:：]/.test(text);
+    }
+
+    function isCenteredText(text, blocks, index) {
+      const previous = blocks[index - 1]?.text || "";
+      const next = blocks[index + 1]?.text || "";
+      const short = text.length > 1 && text.length <= 22;
+      const nameOrRole = /^[\u4e00-\u9fa5·]{2,8}$/.test(text) || /(律师|合伙人|顾问|主任|主席|会长|董事|经理)$/.test(text);
+      return short && nameOrRole && (previous.length === 0 || next.length <= 60);
+    }
+
+    function isTextList(text) {
+      return /^[•·●▪*-]\s*/.test(text)
+        || /^(\d+[.．、]|[（(][一二三四五六七八九十\d]+[）)])\s*\S+/.test(text);
+    }
+
+    function wrapParagraph(inner, attrs = "") {
+      const attrText = attrs ? ` ${attrs}` : "";
+      return `<p${attrText}>\n    ${inner}\n</p>`;
+    }
+
+    function makeInline(block, classification) {
+      const text = block.text || "";
+      if (block.inlineHtml && keepInlineEl.checked && classification.type === "normal") {
+        return block.inlineHtml;
+      }
+      if (block.inlineHtml && keepInlineEl.checked && classification.type !== "quote") {
+        const safe = block.inlineHtml;
+        if (/<(strong|i|u)\b/i.test(safe)) return safe;
+      }
+      return escapeHtml(text);
+    }
+
+    function renderBlock(block, classification) {
+      if (classification.type === "drop") return "";
+      if (classification.type === "image") return block.inlineHtml || "";
+      if (classification.type === "blank") return wrapParagraph("&nbsp;");
+
+      const text = block.text || "";
+      const escaped = escapeHtml(text);
+
+      if (classification.type === "quote") return wrapParagraph(`<i><strong><u>${escaped}</u></strong></i>`);
+      if (classification.type === "center") return wrapParagraph(`<strong>${escaped}</strong>`, `style="text-align:center;"`);
+      if (classification.type === "list") {
+        const normalized = /^[•·●▪*-]\s*/.test(text) ? text.replace(/^[•·●▪*-]\s*/, "• ") : `• ${text}`;
+        const keywordMatch = normalized.match(/^(•\s*)([^：:]{1,14}[：:])([\s\S]*)$/);
+        if (keywordMatch && /关键词|核心|提示|建议|法律依据|应对策略/.test(keywordMatch[2])) {
+          return wrapParagraph(`${escapeHtml(keywordMatch[1])}<strong>${escapeHtml(keywordMatch[2])}</strong>${escapeHtml(keywordMatch[3])}`);
+        }
+        return wrapParagraph(escapeHtml(normalized));
+      }
+      if (classification.type === "strong") return wrapParagraph(`<strong>${escaped}</strong>`);
+      if (classification.type === "inline-heading") {
+        const match = text.match(/^(\d+[.．]\s*[一二三四五六七八九十]+是[\s\S]*?[。.]?)([\s\S]*)$/);
+        if (match) return wrapParagraph(`<strong>${escapeHtml(match[1])}</strong>${escapeHtml(match[2])}`);
+      }
+      if (classification.type === "keyword") {
+        const match = text.match(/^(.{1,12}[:：])([\s\S]*)$/);
+        if (match) return wrapParagraph(`<strong>${escapeHtml(match[1])}</strong>${escapeHtml(match[2])}`);
+      }
+      return wrapParagraph(makeInline(block, classification));
+    }
+
+    function generateHtml() {
+      const source = sourceEl.value;
+      if (!source.trim()) {
+        outputEl.value = "";
+        setStatus("请先粘贴原文或已有HTML。", "error");
+        updateStats();
+        return;
+      }
+
+      const blocks = cleanBlocks(htmlToBlocks(source, keepInlineEl.checked, keepImagesEl.checked));
+      const options = {
+        usePdf: usePdfEl.checked && !!pdfModel,
+        keepTitle: keepTitleEl.checked
+      };
+      let workingBlocks = blocks;
+      if (!options.keepTitle && workingBlocks.length && isArticleTitle(workingBlocks[0].text || "", workingBlocks)) {
+        workingBlocks = workingBlocks.slice(1);
+        while (workingBlocks.length && !workingBlocks[0].text && !workingBlocks[0].image) workingBlocks.shift();
+      }
+
+      const html = workingBlocks
+        .map((block, index) => renderBlock(block, classifyBlock(block, index, blocks, options)))
+        .filter(Boolean)
+        .join("\n\n");
+
+      outputEl.value = html;
+      const pdfNote = usePdfEl.checked ? (pdfModel ? "已使用PDF辅助版式。" : "未读取PDF，已按主文本规则生成。") : "未使用PDF辅助版式。";
+      setStatus(`生成完成。${pdfNote} 最终文字仅来自左侧粘贴文本。`, "ok");
+      updateStats();
+    }
+
+    pdfInputEl.addEventListener("change", async () => {
+      await handlePdfFile(pdfInputEl.files && pdfInputEl.files[0]);
+    });
+
+    document.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      document.body.classList.add("drop-active");
+      setStatus("松开鼠标即可读取PDF版式结构。");
+    });
+
+    document.addEventListener("dragleave", (event) => {
+      if (!event.relatedTarget) document.body.classList.remove("drop-active");
+    });
+
+    document.addEventListener("drop", async (event) => {
+      event.preventDefault();
+      document.body.classList.remove("drop-active");
+      const file = event.dataTransfer?.files?.[0];
+      await handlePdfFile(file);
+    });
+
+    document.getElementById("generateBtn").addEventListener("click", async () => {
+      if (pdfLoading) {
+        setStatus("PDF仍在读取，请稍等...");
+        await pdfLoading.catch(() => null);
+      }
+      generateHtml();
+    });
+
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      if (!outputEl.value) {
+        setStatus("还没有可复制的HTML。", "error");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(outputEl.value);
+        setStatus("HTML已复制。", "ok");
+      } catch {
+        outputEl.select();
+        document.execCommand("copy");
+        setStatus("HTML已复制。", "ok");
+      }
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      sourceEl.value = "";
+      outputEl.value = "";
+      pdfInputEl.value = "";
+      pdfModel = null;
+      updatePdfDebug();
+      setStatus("已清空。可以重新粘贴文本或上传PDF。");
+      updateStats();
+    });
+
+    sourceEl.addEventListener("input", updateStats);
+    outputEl.addEventListener("input", updateStats);
+    updateStats();
   </script>
 </body>
 </html>
